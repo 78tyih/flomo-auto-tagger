@@ -268,7 +268,7 @@ def main():
     except Exception:
         pass  # 非 macOS 或无权限时静默忽略
 
-    # 写入最后一次运行结果到状态文件（供仪表盘读取）
+    # 写入运行结果：同时更新 JSON 和 HTML 内嵌数据
     status = {
         "last_run": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "updated": updated,
@@ -279,6 +279,22 @@ def main():
     status_file = os.path.expanduser("~/scripts/flomo_status.json")
     with open(status_file, "w") as f:
         json.dump(status, f, ensure_ascii=False, indent=2)
+
+    # 把状态数据写入 HTML 文件，使仪表盘无需服务器可直接打开
+    import re
+    dashboard = os.path.join(os.path.dirname(os.path.abspath(__file__)), "flomo_dashboard.html")
+    if os.path.exists(dashboard):
+        with open(dashboard, "r", encoding="utf-8") as f:
+            html = f.read()
+        new_tag = (
+            f'<script>const EMBEDDED_STATUS = {json.dumps(status, ensure_ascii=False)};</script>'
+        )
+        html = re.sub(
+            r'<script>const EMBEDDED_STATUS = \{.*?\};</script>',
+            new_tag, html
+        )
+        with open(dashboard, "w", encoding="utf-8") as f:
+            f.write(html)
 
 
 if __name__ == "__main__":

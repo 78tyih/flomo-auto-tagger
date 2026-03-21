@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- STATUS_DATA: 由 flomo_weekly_tag.py 自动更新，请勿手动修改此行 -->
+<script>const EMBEDDED_STATUS = {"last_run": "2026-03-21 14:10", "updated": 188, "skipped": 1354, "failed": 0, "total": 1543};</script>
 <title>flomo 标签整理仪表盘</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -287,23 +289,19 @@ function updateCountdown() {
     `下次：<span>${fmt}</span>`;
 }
 
-// ── 读取状态文件（需本地 HTTP 服务，否则显示内嵌数据）─────────────
+// ── 读取状态（优先用内嵌数据，其次尝试 JSON 文件）────────────────
 async function loadStatus() {
-  // 尝试通过相对路径加载（本地 HTTP 服务器场景）
+  // 1. 优先：HTML 内嵌数据（由 Python 脚本每次运行后自动写入）
+  if (typeof EMBEDDED_STATUS !== 'undefined' && EMBEDDED_STATUS.last_run) {
+    applyStatus(EMBEDDED_STATUS);
+    return;
+  }
+  // 2. 回退：本地 HTTP 服务器场景
   try {
     const resp = await fetch('flomo_status.json', { cache: 'no-store' });
-    if (resp.ok) {
-      const s = await resp.json();
-      applyStatus(s);
-      return;
-    }
+    if (resp.ok) { applyStatus(await resp.json()); return; }
   } catch(_) {}
-
-  // 回退：显示提示
-  document.getElementById('stat-updated').textContent  = '?';
-  document.getElementById('stat-skipped').textContent  = '?';
-  document.getElementById('stat-failed').textContent   = '?';
-  document.getElementById('last-run-time').textContent = '请用本地服务器打开以读取数据';
+  document.getElementById('last-run-time').textContent = '暂无数据';
 }
 
 function applyStatus(s) {
