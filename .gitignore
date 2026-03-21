@@ -1,0 +1,19 @@
+# 凭证文件（绝对不要提交！）
+.flomo_credentials
+flomo_credentials.json
+*.credentials
+
+# 运行状态
+flomo_status.json
+
+# 日志
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# macOS
+.DS_Store
