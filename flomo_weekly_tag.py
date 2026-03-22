@@ -202,70 +202,30 @@ def get_recent_memos(access_token: str, days: int = 7) -> list[dict]:
     return memos
 
 
-def get_memo_stats(access_token: str) -> dict:
-    """获取全量 memo 统计：总条数 + 最早创建日期（用于计算记录天数）"""
-    sess = _session(access_token)
-    total = 0
-    earliest_date = None
-    cursor_ts = int(datetime(2019, 1, 1).timestamp())  # flomo 上线前，确保拿到全量
-    cursor_slug = None
+def get_memo_stats(creds: dict, new_memos_this_week: int = 0) -> dict:
+    """
+    从凭证文件的 stats_baseline 推算当前统计数据。
+    baseline 记录了某一天的准确值（来自 flomo app），
+    之后每次运行按实际新增条数和天数递增。
+    """
+    baseline = creds.get("stats_baseline", {})
+    base_total   = baseline.get("total_memos", 0)
+    base_days    = baseline.get("record_days", 0)
+    base_date_str = baseline.get("baseline_date", "")
 
-    print("  统计全量 memo...", flush=True)
-    while True:
-        extra = {"limit": 200, "latest_updated_at": cursor_ts, "tz": "8:0"}
-        if cursor_slug:
-            extra["latest_slug"] = cursor_slug
-        params = _build_signed_params(extra)
+    today = datetime.now().date()
+    if base_date_str:
+        try:
+            base_date = datetime.strptime(base_date_str, "%Y-%m-%d").date()
+            days_elapsed = (today - base_date).days
+        except Exception:
+            days_elapsed = 0
+    else:
+        days_elapsed = 0
 
-        for attempt in range(3):
-            resp = sess.get(f"{FLOMO_API}/memo/updated/", params=params, timeout=15)
-            if resp.status_code == 429:
-                time.sleep(5 * (attempt + 1))
-                continue
-            break
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("code") != 0:
-            break
-
-        raw = data.get("data", [])
-        batch = raw if isinstance(raw, list) else raw.get("memos", [])
-        if not batch:
-            break
-
-        total += len(batch)
-
-        # 记录最早的 created_at
-        for m in batch:
-            created_str = m.get("created_at", "")
-            if created_str:
-                try:
-                    dt = datetime.strptime(created_str, "%Y-%m-%d %H:%M:%S")
-                    if earliest_date is None or dt < earliest_date:
-                        earliest_date = dt
-                except Exception:
-                    pass
-
-        if len(batch) < 200:
-            break
-
-        last = batch[-1]
-        cursor_slug = last.get("slug")
-        updated_str = last.get("updated_at", "")
-        if isinstance(updated_str, str):
-            try:
-                cursor_ts = int(datetime.strptime(updated_str, "%Y-%m-%d %H:%M:%S").timestamp())
-            except Exception:
-                break
-        else:
-            cursor_ts = int(updated_str)
-
-        if not cursor_slug:
-            break
-        time.sleep(0.5)
-
-    record_days = (datetime.now() - earliest_date).days + 1 if earliest_date else 0
-    return {"total_memos": total, "record_days": record_days, "since": earliest_date.strftime("%Y-%m-%d") if earliest_date else ""}
+    total_memos = base_total + new_memos_this_week
+    record_days = base_days + days_elapsed
+    return {"total_memos": total_memos, "record_days": record_days}
 
 
 def update_memo(access_token: str, slug: str, new_content: str) -> bool:
@@ -324,9 +284,16 @@ def main():
     summary = f"更新 {updated} 条，跳过 {skipped} 条，失败 {failed} 条"
     print(f"\n完成：{summary}")
 
-    # 获取全量统计（总条数 + 记录天数）
-    stats = get_memo_stats(access_token)
-    print(f"  累计 memo：{stats['total_memos']} 条，记录 {stats['record_days']} 天（自 {stats['since']}）")
+    # 统计本周真正新创建的 memo（created_at 在过去 7 天内）
+    since_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    new_this_week = sum(
+        1 for m in memos
+        if m.get("created_at", "") >= since_date
+    )
+
+    # 从基准值推算当前里程碑数据
+    stats = get_memo_stats(creds, new_memos_this_week=new_this_week)
+    print(f"  累计 memo：{stats['total_memos']} 条，记录 {stats['record_days']} 天")
 
     # macOS 系统通知
     subtitle = "整理完成 ✓" if failed == 0 else f"完成（{failed} 条失败）"
