@@ -268,6 +268,29 @@ def main():
     except Exception:
         pass  # 非 macOS 或无权限时静默忽略
 
+    # 企业微信机器人推送
+    wxwork_webhook = creds.get("wxwork_webhook")
+    if wxwork_webhook:
+        status_icon = "✅" if failed == 0 else "⚠️"
+        run_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+        md_content = (
+            f"## {status_icon} flomo 标签整理完成\n"
+            f"> 运行时间：{run_time}\n\n"
+            f"| 指标 | 数量 |\n"
+            f"|------|------|\n"
+            f"| 📝 扫描 memo | **{len(memos)}** 条 |\n"
+            f"| 🏷️ 新增标签 | **{updated}** 条 |\n"
+            f"| ⏭️ 已有标签跳过 | {skipped} 条 |\n"
+            f"| ❌ 失败 | {failed} 条 |"
+        )
+        try:
+            requests.post(wxwork_webhook, json={
+                "msgtype": "markdown",
+                "markdown": {"content": md_content}
+            }, timeout=10)
+        except Exception as e:
+            print(f"  企业微信推送失败: {e}")
+
     # 写入运行结果：同时更新 JSON 和 HTML 内嵌数据
     status = {
         "last_run": datetime.now().strftime("%Y-%m-%d %H:%M"),
