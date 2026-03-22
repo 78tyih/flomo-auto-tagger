@@ -202,6 +202,72 @@ def get_recent_memos(access_token: str, days: int = 7) -> list[dict]:
     return memos
 
 
+def get_memo_stats(access_token: str) -> dict:
+    """获取全量 memo 统计：总条数 + 最早创建日期（用于计算记录天数）"""
+    sess = _session(access_token)
+    total = 0
+    earliest_date = None
+    cursor_ts = int(datetime(2019, 1, 1).timestamp())  # flomo 上线前，确保拿到全量
+    cursor_slug = None
+
+    print("  统计全量 memo...", flush=True)
+    while True:
+        extra = {"limit": 200, "latest_updated_at": cursor_ts, "tz": "8:0"}
+        if cursor_slug:
+            extra["latest_slug"] = cursor_slug
+        params = _build_signed_params(extra)
+
+        for attempt in range(3):
+            resp = sess.get(f"{FLOMO_API}/memo/updated/", params=params, timeout=15)
+            if resp.status_code == 429:
+                time.sleep(5 * (attempt + 1))
+                continue
+            break
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("code") != 0:
+            break
+
+        raw = data.get("data", [])
+        batch = raw if isinstance(raw, list) else raw.get("memos", [])
+        if not batch:
+            break
+
+        total += len(batch)
+
+        # 记录最早的 created_at
+        for m in batch:
+            created_str = m.get("created_at", "")
+            if created_str:
+                try:
+                    dt = datetime.strptime(created_str, "%Y-%m-%d %H:%M:%S")
+                    if earliest_date is None or dt < earliest_date:
+                        earliest_date = dt
+                except Exception:
+                    pass
+
+        if len(batch) < 200:
+            break
+
+        last = batch[-1]
+        cursor_slug = last.get("slug")
+        updated_str = last.get("updated_at", "")
+        if isinstance(updated_str, str):
+            try:
+                cursor_ts = int(datetime.strptime(updated_str, "%Y-%m-%d %H:%M:%S").timestamp())
+            except Exception:
+                break
+        else:
+            cursor_ts = int(updated_str)
+
+        if not cursor_slug:
+            break
+        time.sleep(0.5)
+
+    record_days = (datetime.now() - earliest_date).days + 1 if earliest_date else 0
+    return {"total_memos": total, "record_days": record_days, "since": earliest_date.strftime("%Y-%m-%d") if earliest_date else ""}
+
+
 def update_memo(access_token: str, slug: str, new_content: str) -> bool:
     """更新 memo 内容（追加标签）"""
     sess = _session(access_token)
@@ -258,6 +324,10 @@ def main():
     summary = f"更新 {updated} 条，跳过 {skipped} 条，失败 {failed} 条"
     print(f"\n完成：{summary}")
 
+    # 获取全量统计（总条数 + 记录天数）
+    stats = get_memo_stats(access_token)
+    print(f"  累计 memo：{stats['total_memos']} 条，记录 {stats['record_days']} 天（自 {stats['since']}）")
+
     # macOS 系统通知
     subtitle = "整理完成 ✓" if failed == 0 else f"完成（{failed} 条失败）"
     try:
@@ -275,13 +345,16 @@ def main():
         run_time = datetime.now().strftime("%Y-%m-%d %H:%M")
         md_content = (
             f"## {status_icon} flomo 标签整理完成\n"
-            f"> 运行时间：{run_time}\n\n"
+            f"> 统计日期：{run_time}\n\n"
+            f"**📔 flomo 记录里程碑**\n"
+            f"> 累计记录：**{stats['total_memos']} 条**\n"
+            f"> 记录天数：**{stats['record_days']} 天**\n\n"
+            f"**🏷️ 本次整理**\n"
             f"| 指标 | 数量 |\n"
             f"|------|------|\n"
-            f"| 📝 扫描 memo | **{len(memos)}** 条 |\n"
-            f"| 🏷️ 新增标签 | **{updated}** 条 |\n"
-            f"| ⏭️ 已有标签跳过 | {skipped} 条 |\n"
-            f"| ❌ 失败 | {failed} 条 |"
+            f"| 新增标签 | **{updated}** 条 |\n"
+            f"| 已有标签跳过 | {skipped} 条 |\n"
+            f"| 失败 | {failed} 条 |"
         )
         try:
             requests.post(wxwork_webhook, json={
@@ -298,6 +371,9 @@ def main():
         "skipped": skipped,
         "failed": failed,
         "total": len(memos),
+        "total_memos": stats["total_memos"],
+        "record_days": stats["record_days"],
+        "since": stats["since"],
     }
     status_file = os.path.expanduser("~/scripts/flomo_status.json")
     with open(status_file, "w") as f:
