@@ -331,30 +331,27 @@ def main():
         except Exception as e:
             print(f"  企业微信推送失败: {e}")
 
-    # WxPusher 转发到个人微信
-    wxpusher_token = creds.get("wxpusher_token")
-    wxpusher_uid = creds.get("wxpusher_uid")
-    if wxpusher_token and wxpusher_uid:
+    # Bark 推送到个人微信（iPhone）
+    bark_token = creds.get("bark_token")
+    if bark_token:
         run_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-        wx_content = (
-            f"✅ flomo 标签整理完成\n"
-            f"统计日期：{run_time}\n\n"
-            f"📔 累计记录：{stats['total_memos']} 条\n"
-            f"📅 记录天数：{stats['record_days']} 天\n\n"
-            f"🏷️ 本次整理\n"
-            f"新增标签：{updated} 条\n"
-            f"已有标签跳过：{skipped} 条\n"
-            f"失败：{failed} 条"
+        status_icon = "✅" if failed == 0 else "⚠️"
+        bark_title = f"{status_icon} flomo 标签整理完成"
+        bark_body = (
+            f"累计 {stats['total_memos']} 条 · {stats['record_days']} 天\n"
+            f"新增标签 {updated} 条 · 跳过 {skipped} 条"
         )
         try:
-            requests.post("https://wxpusher.zjiecode.com/api/send/message", json={
-                "appToken": wxpusher_token,
-                "content": wx_content,
-                "contentType": 1,
-                "uids": [wxpusher_uid]
-            }, timeout=10)
+            import urllib.parse
+            requests.get(
+                f"https://api.day.app/{bark_token}/"
+                f"{urllib.parse.quote(bark_title)}/"
+                f"{urllib.parse.quote(bark_body)}",
+                params={"group": "flomo", "icon": "https://flomoapp.com/favicon.ico"},
+                timeout=10
+            )
         except Exception as e:
-            print(f"  WxPusher 推送失败: {e}")
+            print(f"  Bark 推送失败: {e}")
 
     # 写入运行结果：同时更新 JSON 和 HTML 内嵌数据
     status = {
