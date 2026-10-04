@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>flomo-auto-tagger — 每周自动打标 · 交互展示</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7FAF6; --panel:#FFFFFF; --ink:#17211A; --ink2:#52605A; --ink3:#8B988F;
+  --hairline:rgba(23,33,26,.13); --accent:#1F7A4D; --accent-soft:rgba(31,122,77,.08);
+  --mono:"JetBrains Mono",ui-monospace,monospace; --font-body:"Inter","Noto Sans SC",system-ui,sans-serif;
+}
+html[data-theme="dark"]{
+  --paper:#111512; --panel:#191E1B; --ink:#E6EBE7; --ink2:#A4B0A8; --ink3:#66726A;
+  --hairline:rgba(230,235,231,.14); --accent:#4CC98A; --accent-soft:rgba(76,201,138,.1);
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);margin:0;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 34px}
+.en{display:none} html[data-lang="en"] .en{display:inline} html[data-lang="en"] .zh{display:none}
+header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--hairline)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:15px 34px;max-width:1000px;margin:0 auto}
+.logo{font-size:15px;font-weight:600;text-decoration:none;color:var(--ink)}
+.logo b{color:var(--accent)}
+.hd-right{display:flex;gap:8px}
+.tgl{border:1px solid var(--hairline);background:transparent;color:var(--ink2);padding:5px 13px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font-body)}
+.tgl:hover{color:var(--ink);border-color:var(--ink3)} .tgl.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.hero{padding:80px 0 56px;border-bottom:1px solid var(--hairline)}
+.kicker{display:flex;align-items:center;gap:14px;font-size:11px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--ink2);font-family:var(--mono)}
+.kicker::before{content:"";width:34px;height:1px;background:var(--ink3)}
+h1{font-size:clamp(2rem,4.2vw,3rem);line-height:1.16;letter-spacing:-.01em;font-weight:600;margin:22px 0 0;max-width:24ch}
+h1 em{font-style:normal;color:var(--accent)}
+.sub{max-width:62ch;color:var(--ink2);font-size:15px;margin:18px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:0;margin-top:24px}
+.chip{border:1px solid var(--hairline);padding:7px 15px;font-size:11.5px;color:var(--ink2);background:var(--panel);font-family:var(--mono);letter-spacing:.06em}
+.chip+.chip{border-left:0} .chip b{color:var(--accent);font-weight:500}
+.cta{display:flex;gap:0;margin-top:28px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;font-size:13px;font-weight:500;text-decoration:none;border:1px solid var(--ink);background:transparent;color:var(--ink);transition:all .15s ease}
+.btn--accent{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn+.btn{border-left:0}
+.btn:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+section{padding:60px 0;border-bottom:1px solid var(--hairline)}
+.sec-no{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--accent);text-transform:uppercase}
+h2{font-size:clamp(1.5rem,2.8vw,2rem);font-weight:600;margin:8px 0 0;letter-spacing:-.01em}
+h2 em{font-style:normal;color:var(--accent)}
+.sec-sub{color:var(--ink2);font-size:14px;margin-top:10px;max-width:66ch}
+/* tree */
+.tree{border:1px solid var(--hairline);background:var(--panel);padding:22px 26px;font-family:var(--mono);font-size:13px;line-height:2.05;color:var(--ink2)}
+.tree b{color:var(--accent);font-weight:500}
+.tree .p{color:var(--ink)}
+/* demo */
+.demo{border:1px solid var(--hairline);background:var(--panel)}
+.dz{padding:18px 22px;border-bottom:1px solid var(--hairline)}
+.dz:last-child{border-bottom:0}
+.dz .memo{font-size:13.5px;color:var(--ink2);line-height:1.8}
+.dz .memo code{font-family:var(--mono);font-size:12px;color:var(--accent);background:var(--accent-soft);padding:1px 7px}
+.dz .lab{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--hairline);background:var(--panel)}
+@media(max-width:760px){.flow{grid-template-columns:1fr 1fr}}
+.fs{padding:18px 20px;border-right:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
+.fs:nth-child(4n){border-right:0}
+@media(max-width:760px){.fs:nth-child(4n){border-right:1px solid var(--hairline)}.fs:nth-child(2n){border-right:0}}
+.fs i{font-family:var(--mono);font-style:normal;font-size:10px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
+.fs b{display:block;font-size:13.5px;font-weight:600;margin:5px 0 3px}
+.fs span{font-size:12px;color:var(--ink2)}
+/* caution */
+.caution{border:1px solid var(--hairline);border-left:3px solid var(--accent);background:var(--accent-soft);padding:16px 20px;font-size:13px;color:var(--ink2);margin-top:20px}
+.caution b{color:var(--ink)}
+/* faq */
+.faq{border:1px solid var(--hairline);background:var(--panel)}
+details.faq-item{border-bottom:1px solid var(--hairline)}
+details.faq-item:last-child{border-bottom:0}
+details.faq-item summary{cursor:pointer;list-style:none;display:flex;gap:16px;align-items:baseline;padding:17px 20px}
+details.faq-item summary::-webkit-details-marker{display:none}
+details.faq-item summary:hover .qt{color:var(--accent)}
+details.faq-item summary .qm{font-family:var(--mono);color:var(--accent);font-size:10.5px;letter-spacing:.22em;min-width:52px;text-transform:uppercase}
+details.faq-item summary .qt{flex:1;font-size:15.5px;font-weight:500}
+details.faq-item summary .qc{color:var(--ink3);font-family:var(--mono);font-size:13px;transition:transform .15s ease}
+details.faq-item[open] summary .qc{transform:rotate(45deg)}
+details.faq-item .qa{padding:0 20px 20px 88px;color:var(--ink2);font-size:14px;line-height:1.75}
+details.faq-item .qa b{color:var(--ink)}
+@media(max-width:700px){details.faq-item .qa{padding-left:20px}}
+footer{padding:40px 0 56px;color:var(--ink3);font-size:12px}
+.fm{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header><div class="hd">
+  <a class="logo" href="#">flomo-<b>auto-tagger</b></a>
+  <div class="hd-right">
+    <button class="tgl on" id="lang-zh" onclick="setLang('zh')">中</button>
+    <button class="tgl" id="lang-en" onclick="setLang('en')">EN</button>
+    <button class="tgl on" id="th-light" onclick="setTheme('light')">☀︎</button>
+    <button class="tgl" id="th-dark" onclick="setTheme('dark')">☾</button>
+  </div>
+</div></header>
+
+<div class="wrap">
+<section class="hero">
+  <div class="kicker">WEEKLY CRON <span style="color:var(--ink3)">·</span> THREE-LEVEL TAGS <span style="color:var(--ink3)">·</span> ZERO UI</div>
+  <h1><span class="zh">flomo 笔记<em>每周自动打标</em>，按你定好的三级体系</span><span class="en">Weekly auto-tagging for flomo, on your taxonomy</span></h1>
+  <p class="sub"><span class="zh">一个 389 行的 Python 脚本：拉取过去 7 天新增 memo，按三级标签规则（账号/交易/工具/阅读/生活/健康/内心）关键词匹配补标，不重复已有标签。凭证放本地文件，永远不进仓库。</span>
+  <span class="en">A 389-line Python script: fetch the last 7 days of memos, keyword-match against your three-level taxonomy, tag without duplicates. Credentials stay local.</span></p>
+  <div class="chips">
+    <span class="chip"><b>389</b> <span class="zh">行 Python</span><span class="en">lines</span></span>
+    <span class="chip"><b>1</b> <span class="zh">个依赖（requests）</span><span class="en">dependency</span></span>
+    <span class="chip"><b>7</b> <span class="zh">天回看窗口</span><span class="en">day lookback</span></span>
+    <span class="chip"><b>3</b> <span class="zh">级标签体系</span><span class="en">level taxonomy</span></span>
+  </div>
+  <div class="cta">
+    <a class="btn btn--accent" href="#rules"><span class="zh">看打标规则 ↓</span><span class="en">See the rules ↓</span></a>
+    <a class="btn" href="https://github.com/78tyih/flomo-auto-tagger">GitHub</a>
+  </div>
+</section>
+
+<section id="rules">
+  <div class="sec-no">01 · TAXONOMY</div>
+  <h2><span class="zh">三级标签体系：<em>优先级即顺序</em></span><span class="en">The taxonomy — order is priority</span></h2>
+  <p class="sec-sub"><span class="zh">规则数组自上而下匹配，靠前的类目先占坑（账号/密码优先于一切，避免误判）；同层标签不重复添加：</span>
+  <span class="en">Rules match top-down — account/security rules first to avoid mis-tagging; a memo never gets duplicate tags in the same branch:</span></p>
+  <div class="tree" style="margin-top:22px">
+    <b>账号/</b>API · 密码　<span style="color:var(--ink3)">← 最高优先级（api key / token / 密码…）</span><br>
+    <b>交易/</b>订单流 · 工具 · 心态 · 系统 · 市场<br>
+    <b>工具/</b>AI · 应用<br>
+    <b>阅读/</b>MorningRocks · 知乎 · 尼采 · 泰戈尔 · 史铁生 · 加缪 · 博尔赫斯 · 黑塞 · 文摘…<br>
+    <b>生活/</b>文艺 · 工作 · 日常<br>
+    <b>健康/</b>减重<br>
+    <b>内心/</b>哲思 · 成长 · 感悟 · 情感　<span style="color:var(--ink3)">← 较宽泛，放最后</span>
+  </div>
+  <div class="demo" style="margin-top:22px">
+    <div class="dz"><div class="lab"><span class="zh">输入 memo 示例</span><span class="en">memo in</span></div>
+      <div class="memo">「今天复盘订单流：delta 走弱但主力没派发，纪律上先减半仓，止盈位下移。」</div></div>
+    <div class="dz"><div class="lab"><span class="zh">脚本补上的标签</span><span class="en">tags added</span></div>
+      <div class="memo"><code>#交易/订单流</code> <code>#交易/心态</code> <code>#交易/系统</code>　<span style="color:var(--ink3)">—— 已有 #交易 或 #交易/订单流 的 memo 自动跳过对应层级</span></div></div>
+  </div>
+</section>
+
+<section id="flow">
+  <div class="sec-no">02 · HOW IT WORKS</div>
+  <h2><span class="zh">四步流水线</span><span class="en">Four-step flow</span></h2>
+  <div class="flow" style="margin-top:22px">
+    <div class="fs"><i>STEP 1</i><b><span class="zh">读凭证</span><span class="en">Credentials</span></b><span>~/.flomo_credentials（access_token + webhook）<span class="zh">，本地文件</span></span></div>
+    <div class="fs"><i>STEP 2</i><b><span class="zh">拉 memo</span><span class="en">Fetch</span></b><span><span class="zh">flomo API 游标分页，近 7 天，429 退避重试</span><span class="en">cursor pagination, 7-day window, 429 backoff</span></span></div>
+    <div class="fs"><i>STEP 3</i><b><span class="zh">匹配规则</span><span class="en">Match</span></b><span>TAG_RULES <span class="zh">自上而下，跳过已有层级标签</span><span class="en">top-down, skips existing branch tags</span></span></div>
+    <div class="fs"><i>STEP 4</i><b><span class="zh">写回</span><span class="en">Write</span></b><span><span class="zh">编辑 memo 追加 #标签</span><span class="en">edit memo, append #tags</span></span></div>
+  </div>
+  <div class="caution"><span class="zh"><b>凭证边界</b>：个人 access_token 只存在 ~/.flomo_credentials（JSON），永远不进仓库；脚本内硬编码的 sign 密钥是 flomo web 端的全局签名常量（逆向自其 web app），非个人凭证。API 属非官方接口，flomo 改版可能失效。</span>
+  <span class="en"><b>Credential boundary</b>: your token lives only in ~/.flomo_credentials; the hardcoded sign key is flomo's app-wide web constant (reverse-engineered), not a personal secret. Unofficial API — may break on flomo updates.</span></div>
+</section>
+
+<section id="why">
+  <div class="sec-no">03 · FAQ</div>
+  <h2><span class="zh">常见问题 · 四问速览</span><span class="en">FAQ · The four questions</span></h2>
+  <div class="faq" style="margin-top:22px">
+    <details class="faq-item" open>
+      <summary><span class="qm">Q.1</span><span class="qt"><span class="zh">解决什么问题？</span><span class="en">What problem does it solve?</span></span><span class="qc">＋</span></summary>
+      <div class="qa"><span class="zh">flomo 记得快但标签靠手补，积压一周就再也不想整理。脚本按你定好的三级体系每周自动补标，笔记库保持可检索。</span><span class="en">Quick capture dies without tags; after a week nobody back-fills. The script keeps the library searchable on your own taxonomy, weekly, hands-free.</span></div>
+    </details>
+    <details class="faq-item">
+      <summary><span class="qm">Q.2</span><span class="qt"><span class="zh">什么场景用？得到什么结果？</span><span class="en">Scenario and outcome?</span></span><span class="qc">＋</span></summary>
+      <div class="qa"><span class="zh">每周定时跑（cron/launchd 自排）：过去 7 天的 memo 自动带上 #交易/订单流 这类三级标签；同层不重复、已有标签不覆盖。</span><span class="en">Run weekly via cron/launchd: last week's memos get three-level tags — no duplicates, no overwriting.</span></div>
+    </details>
+    <details class="faq-item">
+      <summary><span class="qm">Q.3</span><span class="qt"><span class="zh">内部是什么结构？</span><span class="en">How is it structured?</span></span><span class="qc">＋</span></summary>
+      <div class="qa"><span class="zh">单文件 389 行：TAG_RULES（7 大类三级标签的关键词表）→ get_tags_for_memo（去重匹配）→ flomo API 客户端（游标分页 + MD5 sign 签名，逆向自 flomo web）→ 编辑写回。依赖仅 requests。</span><span class="en">One 389-line file: TAG_RULES → matcher → flomo API client (cursor pagination + MD5 sign) → write-back. Only requests.</span></div>
+    </details>
+    <details class="faq-item">
+      <summary><span class="qm">Q.4</span><span class="qt"><span class="zh">能复用什么？</span><span class="en">What can you reuse?</span></span><span class="qc">＋</span></summary>
+      <div class="qa"><span class="zh">① 「优先级即顺序」的规则表写法；② flomo 非官方 API 的签名与分页配方（sign = md5(sorted qs + secret)）；③ 「跳过已有父级标签」的去重逻辑；④ 凭证本地文件化的习惯。改成你自己的 TAG_RULES 即可用于任何 flomo 账号。</span><span class="en">Priority-ordered rule tables, the flomo signing/pagination recipe, parent-tag dedup, and local credential hygiene — swap in your own TAG_RULES and run.</span></div>
+    </details>
+  </div>
+</section>
+
+<footer><div class="fm">
+  <div><b style="color:var(--ink2)">flomo-auto-tagger</b> · <span class="zh">每周自动打标脚本</span><span class="en">weekly auto-tagger</span></div>
+  <div><span class="zh">规则表与 API 行为逐项对照脚本源码（Observed）</span><span class="en">Rules and API behavior verified against source (Observed)</span></div>
+</div></footer>
+</div>
+
+<script>
+const lang=()=>document.documentElement.dataset.lang;
+function setLang(l){document.documentElement.dataset.lang=l;localStorage.setItem("fl-lang",l);
+ document.getElementById("lang-zh").classList.toggle("on",l==="zh");
+ document.getElementById("lang-en").classList.toggle("on",l==="en");}
+function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem("fl-theme",t);
+ document.getElementById("th-light").classList.toggle("on",t==="light");
+ document.getElementById("th-dark").classList.toggle("on",t==="dark");}
+(function boot(){
+ const q=new URLSearchParams(location.search);
+ setTheme(q.get("theme")||localStorage.getItem("fl-theme")||"light");
+ setLang(q.get("lang")||localStorage.getItem("fl-lang")||(navigator.language.startsWith("zh")?"zh":"en"));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "slug": "flomo-auto-tagger",
+  "name": "flomo-auto-tagger",
+  "oneLiner": {
+    "zh": "flomo 笔记每周自动打标：按自定义三级标签体系关键词匹配补标，不重复已有标签，凭证本地化。",
+    "en": "Weekly auto-tagging for flomo: keyword-match against your three-level taxonomy, no duplicates, credentials local."
+  },
+  "type": "personal automation script (Python)",
+  "status": "in personal use (unofficial flomo API)",
+  "repo": "https://github.com/78tyih/flomo-auto-tagger",
+  "showcase": "https://78tyih.github.io/flomo-auto-tagger/showcase.html",
+  "fourQuestions": {
+    "problem": "flomo 记得快但标签靠手补，积压即失序，笔记库不可检索。",
+    "scenarioOutcome": "每周定时跑：过去 7 天 memo 自动补上三级标签（#交易/订单流 等），同层不重复、已有标签不覆盖。",
+    "architecture": "单文件 389 行：TAG_RULES（7 大类三级关键词表，优先级即顺序）→ 去重匹配（跳过已有父级标签）→ flomo API 客户端（游标分页 + MD5 sign，逆向自 flomo web）→ 编辑写回。依赖仅 requests。",
+    "reuse": "优先级即顺序的规则表写法；flomo 非官方 API 签名/分页配方；父级标签去重逻辑；凭证本地文件化。"
+  },
+  "security": {
+    "personalCredentials": "~/.flomo_credentials（本地 JSON，不入仓库）",
+    "hardcodedKey": "flomo web 端全局签名常量（逆向所得，非个人凭证）",
+    "risk": "非官方接口，flomo 改版可能失效"
+  },
+  "links": {"source": ["flomo_weekly_tag.py"]}
+}
